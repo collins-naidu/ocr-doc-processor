@@ -102,25 +102,24 @@ class App(tk.Tk):
     def preprocess_image(self, image):
         """
         Applies advanced pre-processing to an image for better OCR results.
-        Uses OpenCV for grayscaling, noise reduction, and adaptive thresholding.
+        Uses a robust Pillow -> OpenCV -> Pillow pipeline.
         """
-        # Convert Pillow image to OpenCV image
-        # Pillow images are RGB, OpenCV is BGR, so convert color space
-        open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        # Use Pillow to robustly convert to grayscale ('L' mode) first.
+        # This handles all input modes (RGB, RGBA, P, etc.) gracefully.
+        gray_pil = image.convert('L')
 
-        # Convert to grayscale
-        gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
+        # Convert the grayscale Pillow image to an OpenCV image
+        open_cv_gray = np.array(gray_pil)
 
         # Apply a median blur to reduce salt-and-pepper noise
-        blurred = cv2.medianBlur(gray, 3)
+        blurred = cv2.medianBlur(open_cv_gray, 3)
 
         # Apply adaptive thresholding to get a clean black and white image
-        # This is powerful for images with varying background lighting
         thresh = cv2.adaptiveThreshold(blurred, 255,
                                        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                        cv2.THRESH_BINARY, 11, 2)
 
-        # Convert back to Pillow image
+        # Convert the processed OpenCV image back to a Pillow image
         return Image.fromarray(thresh)
 
     def process_files(self, files):
