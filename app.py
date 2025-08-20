@@ -7,6 +7,8 @@ import pytesseract
 from PIL import Image
 import docx
 import fitz  # PyMuPDF
+import cv2
+import numpy as np
 
 # You might need to configure the path to the Tesseract executable
 # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -98,12 +100,28 @@ class App(tk.Tk):
 
 
     def preprocess_image(self, image):
-        """Converts image to grayscale and applies thresholding."""
-        img = image.convert('L')
-        # The threshold value (e.g., 128) can be tuned for better results.
-        threshold = 128
-        img = img.point(lambda x: 0 if x < threshold else 255, '1')
-        return img
+        """
+        Applies advanced pre-processing to an image for better OCR results.
+        Uses OpenCV for grayscaling, noise reduction, and adaptive thresholding.
+        """
+        # Convert Pillow image to OpenCV image
+        # Pillow images are RGB, OpenCV is BGR, so convert color space
+        open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+        # Convert to grayscale
+        gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
+
+        # Apply a median blur to reduce salt-and-pepper noise
+        blurred = cv2.medianBlur(gray, 3)
+
+        # Apply adaptive thresholding to get a clean black and white image
+        # This is powerful for images with varying background lighting
+        thresh = cv2.adaptiveThreshold(blurred, 255,
+                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY, 11, 2)
+
+        # Convert back to Pillow image
+        return Image.fromarray(thresh)
 
     def process_files(self, files):
         self.show_wait_message()
