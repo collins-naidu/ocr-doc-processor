@@ -146,32 +146,29 @@ class App(tk.Tk):
             text = ""
             is_ocr_needed = False
 
-            # First, try to extract text directly
-            for page in doc:
-                page_text = page.get_text()
-                if page_text.strip():  # If there is text
-                    text += page_text
+            # DIAGNOSTIC MODE: Force OCR on all PDFs to test pipeline quality.
+            # This logic bypasses the initial text extraction to ensure the new
+            # OpenCV pre-processing and Tesseract OCR is used on every page.
+            text = ""
+            is_ocr_needed = True
 
-            # If no text was extracted, we need to do OCR
-            if not text.strip():
-                is_ocr_needed = True
-                # Tesseract configuration
-                # --psm 3 (default) is generally good for preserving layout.
-                custom_config = r'--oem 3 --psm 3'
+            # Tesseract configuration
+            # --psm 3 (default) is generally good for preserving layout.
+            custom_config = r'--oem 3 --psm 3'
 
-                for page_num, page in enumerate(doc):
-                    print(f"Page {page_num+1} of {file_path} requires OCR.")
-                    # Render page at a higher resolution (300 DPI)
-                    zoom = 300 / 72
-                    matrix = fitz.Matrix(zoom, zoom)
-                    pix = page.get_pixmap(matrix=matrix)
+            for page_num, page in enumerate(doc):
+                print(f"Page {page_num+1} of {file_path} requires OCR.")
+                # Render page at a higher resolution (300 DPI)
+                zoom = 300 / 72
+                matrix = fitz.Matrix(zoom, zoom)
+                pix = page.get_pixmap(matrix=matrix)
 
-                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-                    # Pre-process the image for better accuracy
-                    processed_img = self.preprocess_image(img)
+                # Pre-process the image for better accuracy
+                processed_img = self.preprocess_image(img)
 
-                    text += pytesseract.image_to_string(processed_img, config=custom_config)
+                text += pytesseract.image_to_string(processed_img, config=custom_config)
 
             # Create and save the docx file
             docx_doc = docx.Document()
