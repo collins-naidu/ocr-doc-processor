@@ -97,6 +97,14 @@ class App(tk.Tk):
         self.update_idletasks()
 
 
+    def preprocess_image(self, image):
+        """Converts image to grayscale and applies thresholding."""
+        img = image.convert('L')
+        # The threshold value (e.g., 128) can be tuned for better results.
+        threshold = 128
+        img = img.point(lambda x: 0 if x < threshold else 255, '1')
+        return img
+
     def process_files(self, files):
         self.show_wait_message()
         try:
@@ -131,21 +139,22 @@ class App(tk.Tk):
             if not text.strip():
                 is_ocr_needed = True
                 # Tesseract configuration
-                # Use 'eng' for English. For other languages, use the corresponding 3-letter code (e.g., 'spa' for Spanish).
-                # You can find more language codes here: https://tesseract-ocr.github.io/tessdoc/Data-Files-in-v4.0.0.html
-                # --oem 3 is the default OCR Engine Mode.
-                # --psm 6 assumes a single uniform block of text. Try other modes (0-13) for different document layouts.
-                custom_config = r'--oem 3 --psm 6'
+                # --psm 3 (default) is generally good for preserving layout.
+                custom_config = r'--oem 3 --psm 3'
 
                 for page_num, page in enumerate(doc):
                     print(f"Page {page_num+1} of {file_path} requires OCR.")
-                    # Render page at a higher resolution (300 DPI) for better OCR accuracy
+                    # Render page at a higher resolution (300 DPI)
                     zoom = 300 / 72
                     matrix = fitz.Matrix(zoom, zoom)
                     pix = page.get_pixmap(matrix=matrix)
 
                     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    text += pytesseract.image_to_string(img, config=custom_config)
+
+                    # Pre-process the image for better accuracy
+                    processed_img = self.preprocess_image(img)
+
+                    text += pytesseract.image_to_string(processed_img, config=custom_config)
 
             # Create and save the docx file
             docx_doc = docx.Document()
@@ -173,10 +182,13 @@ class App(tk.Tk):
         try:
             image = Image.open(file_path)
 
+            # Pre-process the image for better accuracy
+            processed_image = self.preprocess_image(image)
+
             # Tesseract configuration
-            # See comments in process_pdf for more details on configuration options.
-            custom_config = r'--oem 3 --psm 6'
-            text = pytesseract.image_to_string(image, config=custom_config)
+            # --psm 3 (default) is generally good for preserving layout.
+            custom_config = r'--oem 3 --psm 3'
+            text = pytesseract.image_to_string(processed_image, config=custom_config)
 
             doc = docx.Document()
             doc.add_paragraph(text)
