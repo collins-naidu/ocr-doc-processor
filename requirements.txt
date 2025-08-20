@@ -1,0 +1,6 @@
+sv-ttk
+pytesseract
+python-docx
+PyMuPDF
+Pillow
+darkdetect
